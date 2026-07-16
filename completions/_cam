@@ -1,0 +1,82 @@
+#compdef cam
+#
+# Zsh completion for cam.
+#
+# Install (fpath method - preferred): copy this file to a directory in your
+# $fpath named exactly "_cam", then run `compinit` (usually already
+# enabled). For example:
+#   mkdir -p ~/.zsh/completions
+#   cp _cam ~/.zsh/completions/
+#   # ensure ~/.zsh/completions is in fpath (add to ~/.zshrc if needed):
+#   fpath=(~/.zsh/completions $fpath)
+#   autoload -Uz compinit && compinit
+#
+# Or simply source this file from ~/.zshrc.
+
+_cam() {
+    local -a commands flags desktop_cmds code_cmds
+    commands=(status list activate add rename remove migrate desktop code)
+    flags=(--headless --force --verbose --help)
+    desktop_cmds=(status list activate add rename remove)
+    code_cmds=(status list activate add rename remove)
+
+    # First word: top-level command or global flag.
+    if (( CURRENT == 2 )); then
+        compadd -- $commands
+        compadd -- $flags
+        return
+    fi
+
+    local cmd=$words[2]
+
+    # `cam desktop ...` and `cam code ...`
+    if [[ "$cmd" == "desktop" || "$cmd" == "code" ]]; then
+        local -a sub_cmds
+        sub_cmds=($desktop_cmds)
+        [[ "$cmd" == "code" ]] && sub_cmds=($code_cmds)
+        if (( CURRENT == 3 )); then
+            compadd -- $sub_cmds
+            compadd -- $flags
+            return
+        fi
+        local sub=$words[3]
+        case $sub in
+            activate|remove) _cam_accounts ;;
+            rename)
+                if (( CURRENT == 4 )); then
+                    _cam_accounts
+                else
+                    compadd -- $flags
+                fi ;;
+            *) compadd -- $flags ;;
+        esac
+        return
+    fi
+
+    # Top-level (combined) commands operate on both Desktop and Code.
+    case $cmd in
+        activate|remove) _cam_accounts ;;
+        rename)
+            if (( CURRENT == 3 )); then
+                _cam_accounts
+            fi ;;
+        *) compadd -- $flags ;;
+    esac
+}
+
+# Complete with known profile names (directories under the accounts/ dir).
+_cam_accounts() {
+    local home="${CLAUDE_PROFILE_CONFIG:-$HOME/.claude-account-manager}"
+    local -a profs
+    profs=($home/accounts/*(/N:t))
+    if (( ${#profs} )); then
+        compadd -- $profs
+    fi
+}
+
+# Register the completion. The `#compdef` header above handles registration
+# automatically when this file is autoloaded from $fpath; this explicit call
+# also makes it work when the file is sourced directly (after `compinit`).
+if (( ${+functions[compdef]} )); then
+    compdef _cam cam
+fi
