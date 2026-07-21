@@ -8,7 +8,8 @@
 set -euo pipefail
 
 # Locate this script's directory so module paths are independent of $PWD / $PATH.
-CAM_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# CAM_ROOT can be pre-set by a Homebrew wrapper; respect it if already defined.
+CAM_ROOT="${CAM_ROOT:-"$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"}"
 
 # Safety: without the implementation modules cam cannot run. Fail clearly
 # instead of producing a cryptic "command not found".
