@@ -99,10 +99,16 @@ git push origin "$NEW_TAG"
 # ---- create GitHub Release -------------------------------------------------
 if command -v gh >/dev/null 2>&1; then
   info "creating GitHub Release..."
-  if LATEST_TAG_FOR_NOTES=$(git tag --sort=-v:refname | grep -v "^$NEW_TAG$" | head -1); then
-    gh release create "$NEW_TAG" --title "$NEW_TAG" --notes-start-tag "$LATEST_TAG_FOR_NOTES"
-  else
-    gh release create "$NEW_TAG" --title "$NEW_TAG" --notes "First release."
+  RELEASE_CREATED=false
+  PREV_TAG=$(git tag --sort=-v:refname | grep -v "^$NEW_TAG$" | head -1)
+  if [[ -n "$PREV_TAG" ]]; then
+    gh release create "$NEW_TAG" --title "$NEW_TAG" --generate-notes --notes-start-tag "$PREV_TAG" && RELEASE_CREATED=true
+  fi
+  if ! $RELEASE_CREATED; then
+    gh release create "$NEW_TAG" --title "$NEW_TAG" --generate-notes && RELEASE_CREATED=true
+  fi
+  if ! $RELEASE_CREATED; then
+    gh release create "$NEW_TAG" --title "$NEW_TAG" --notes "" || warn "GitHub Release creation failed"
   fi
 fi
 
