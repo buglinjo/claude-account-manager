@@ -60,8 +60,7 @@ if git rev-parse "$NEW_TAG" >/dev/null 2>&1; then
 fi
 
 # ---- compute archive SHA ---------------------------------------------------
-GIT_REF="${NEW_TAG#v}"
-ARCHIVE_PREFIX="claude-account-manager-${NEW_TAG}/"
+ARCHIVE_PREFIX="claude-account-manager-${NEW_TAG#v}/"
 
 info "computing archive sha256..."
 SHA=$(git archive --format=tar.gz --prefix="$ARCHIVE_PREFIX" HEAD | shasum -a 256 | cut -d' ' -f1)
