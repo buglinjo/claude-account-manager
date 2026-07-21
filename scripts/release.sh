@@ -13,7 +13,7 @@ set -euo pipefail
 
 # ---- config ----------------------------------------------------------------
 HOMEBREW_TAP_REL="../homebrew-claude-account-manager"
-FORMULA_REL="Formula/cam.rb"
+FORMULA_REL="Formula/claude-account-manager.rb"
 GITHUB_REPO="buglinjo/claude-account-manager"
 
 # ---- helpers ---------------------------------------------------------------
