@@ -8,29 +8,10 @@
 # Echo the absolute path of the config file.
 config_file() { echo "$CONFIG_FILE"; }
 
-# Migrate a legacy config that used the "profiles" key to the new "accounts" key,
-# preserving all metadata. Idempotent and never destructive.
-config_migrate_schema() {
-  local f; f="$(config_file)"
-  [[ -f "$f" ]] || return 0
-  python3 - "$f" <<'PY'
-import json, sys
-f = sys.argv[1]
-try:
-    d = json.load(open(f))
-except Exception:
-    sys.exit(0)
-if "profiles" in d and "accounts" not in d:
-    d["accounts"] = d.pop("profiles")
-    json.dump(d, open(f, "w"), indent=2)
-PY
-}
-
 # Create an empty config file (and its parent directory) if missing.
 ensure_config() {
   local f
   f="$(config_file)"
-  config_migrate_schema
   if [[ ! -f "$f" ]]; then
     mkdir -p -- "$CAM_HOME"
     printf '{}' > "$f"
@@ -41,7 +22,6 @@ ensure_config() {
 config_list_accounts() {
   local f
   f="$(config_file)"
-  config_migrate_schema
   [[ ! -f "$f" ]] && return 0
   python3 - "$f" <<'PY'
 import json, sys
@@ -106,7 +86,6 @@ PY
 config_display() {
   local f
   f="$(config_file)"
-  config_migrate_schema
   [[ ! -f "$f" ]] && return 0
   python3 - "$f" "$1" <<'PY'
 import json, sys

@@ -125,8 +125,6 @@ symlinks are the single source of truth.
 | `cam rename <old> <new>` | Rename a account (updates symlinks if active). |
 | `cam remove <name>` | Remove a account (prompts; `--force` bypasses; active account needs `--force`). |
 | `cam activate <name>` | Repoint both symlinks to `<name>` (non-strict: warns and skips a missing platform). |
-| `cam migrate [<name>]` | Convert a legacy (pre-`cam`) installation into accounts. Requires confirmation or `--force`. |
-
 ### Desktop (`cam desktop ...`)
 
 | Command | Description |
@@ -154,7 +152,7 @@ symlinks are the single source of truth.
 | Flag | Effect |
 | --- | --- |
 | `--headless` | Never prompt; return errors via exit codes only. |
-| `--force` | Bypass confirmation prompts (e.g. for `remove` / `migrate`); also allows removing the active account. |
+| `--force` | Bypass confirmation prompts (e.g. for `remove`); also allows removing the active account. |
 | `--launch` | Reopen Claude Desktop after switching (default). |
 | `--no-launch` | Do not reopen Claude Desktop after switching. |
 | `--verbose` | Show detailed operations. |
@@ -211,50 +209,6 @@ is running, `cam` handles it explicitly:
 When Claude Desktop is **not** running, the switch happens immediately and
 Claude is reopened afterwards per `--launch` (default) / `--no-launch`.
 
-## Migrating from a legacy installation (`cam migrate`)
-
-`cam` manages two kinds of legacy data:
-
-1. **Previous storage location.** `cam`'s data used to live at
-   `~/.config/claude-account-manager`. The first time you run any `cam` command
-   after installing the new version, it prints a notice if that old location
-   still exists and the new `~/.claude-account-manager` does not:
-
-   ```
-   Found old cam data:
-     ~/.config/claude-account-manager
-   Would you like to migrate to:
-     ~/.claude-account-manager
-   Run 'cam migrate' to move it (data is never overwritten automatically).
-   ```
-
-   `cam migrate` moves the old directory into the new home (config + accounts)
-   and never overwrites data that already exists in the new location.
-
-2. **Pre-symlink Claude layouts.** Before `cam` switched to symlinks, you may
-   have a real `~/Library/Application Support/Claude` directory (and possibly
-   `Claude-<name>` directories), plus an old
-   `~/.config/claude-account-manager/code/<name>` layout. `cam migrate` converts
-   these into the account system without duplicating data.
-
-```bash
-# One-time migration. The active (unnamed) account becomes <name>; any
-# Claude-<name> legacy accounts are also imported. Requires confirmation,
-# or pass --force to skip the prompt.
-cam migrate work
-cam migrate --force
-```
-
-`migrate` will **never overwrite** an existing account. If the target account
-directory already exists, the migration is skipped for that account with a
-warning. After migrating, the active account is a symlink pointing at
-`accounts/<name>/desktop`.
-
-If `~/Library/Application Support/Claude` is a **real directory** (not a symlink)
-when `cam` runs, `status` reports it as a legacy installation and tells you to
-run `cam migrate` first. `cam` will not silently replace a real directory with a
-symlink.
-
 ## Examples
 
 ```bash
@@ -282,9 +236,6 @@ cam remove test
 
 # Remove without prompting (e.g. in a script / CI)
 cam remove test --force --headless
-
-# Convert an existing real Claude installation into a account
-cam migrate personal
 ```
 
 ### Example `cam status` output
@@ -295,11 +246,11 @@ Active account:
 
 Claude Desktop:
   Active account: work
-  target: /Users/you/.config/claude-account-manager/accounts/work/desktop
+  target: /Users/you/.claude-account-manager/accounts/work/desktop
 
 Claude Code:
   Active account: work
-  target: /Users/you/.config/claude-account-manager/accounts/work/code
+  target: /Users/you/.claude-account-manager/accounts/work/code
 ```
 
 ### Example `cam list` output
@@ -368,9 +319,7 @@ at a time, and because the active account is just a symlink, Claude reads the
 right data with no environment variables.
 
 `~/.claude` is owned by `cam` only when a Code account is active; if you have a
-pre-existing real `~/.claude` directory, `cam` treats it as a legacy
-installation (see [Migration](#migrating-from-a-legacy-installation-cam-migrate))
-and will not silently replace it.
+pre-existing real `~/.claude` directory, `cam` will not silently replace it.
 
 ### Product availability
 
@@ -407,7 +356,6 @@ suite so it never touches real Claude data):
 | Variable | Default |
 | --- | --- |
 | `CLAUDE_ACCOUNT_MANAGER_HOME` | `~/.claude-account-manager` |
-| `CLAUDE_PROFILE_OLD_CONFIG` | `~/.config/claude-account-manager` (previous location, for migration) |
 | `CLAUDE_PROFILE_APP_SUPPORT` | `~/Library/Application Support` |
 | `CLAUDE_PROFILE_CLUDE_HOME` | `~/.claude` |
 | `CLAUDE_PROFILE_MOCK_RUNNING` | (unset) set `1`/`0` to force Claude Desktop running detection |
@@ -424,12 +372,10 @@ suite so it never touches real Claude data):
   Support` are handled).
 - Switching repoints **symlinks only** — directories are never copied or moved.
 - The active account is a symlink; `cam` will **not** overwrite a real
-  (non-symlink) directory — it reports a legacy installation and asks you to run
-  `cam migrate`.
+  (non-symlink) directory.
 - The **active account can be removed only with `--force`**; without it, `remove`
   refuses (exit 3). In `--headless` mode without `--force`, `remove` refuses
   outright (exit 1).
-- Renames/removals **cannot overwrite** an existing account.
 - All account names are validated (letters, digits, `-`, `_`).
 - When activating a Desktop account while Claude Desktop is running, `cam`
    prompts to quit/switch/reopen it (or, in `--headless`, refuses with exit 7).
@@ -481,9 +427,6 @@ directory already exists, it is simply re-registered (no data is overwritten).
 
 ## Troubleshooting
 
-- **"This looks like a legacy installation. Run 'cam migrate' first."** — Your
-  `~/Library/Application Support/Claude` (or `~/.claude`) is a real directory, not
-  a symlink. Run `cam migrate <name>` to convert it.
 - **Activation seems to do nothing.** — Restart Claude Desktop / Claude Code; an
   already-open app keeps reading the previous account until it reloads.
 - **Login status shows `unknown`.** — The account sub-directory is missing or its
@@ -532,10 +475,9 @@ lib/                Implementation modules (sourced, not compiled):
                       process management (code_is_running/list_pids/stop/
                       stop_force/wait_for_exit/restart_for_activation). Mockable
                       via CAM_MOCK_CODE_* env vars.
-  migration.sh      Legacy-data migration (old location + pre-symlink layouts).
   commands.sh       Shared command implementations (do_*), combined
                     status/list, the desktop/code/combined subcommand
-                    dispatchers, print_help, old-location notice, and main().
+                    dispatchers, print_help, and main().
 
 test_cam.sh         Automated test suite. Runs `cam` against temporary fake
                     Application Support / config / ~/.claude directories via

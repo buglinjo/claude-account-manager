@@ -15,7 +15,7 @@
 
 _cam() {
     local -a commands flags desktop_cmds code_cmds
-    commands=(status list activate add rename remove migrate desktop code)
+    commands=(status list activate add rename remove desktop code)
     flags=(--headless --force --verbose --help)
     desktop_cmds=(status list activate add rename remove)
     code_cmds=(status list activate add rename remove)

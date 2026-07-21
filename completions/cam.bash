@@ -11,7 +11,7 @@ _cam() {
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
     local global_flags="--headless --force --verbose --help"
-    local top_commands="status list activate add rename remove migrate desktop code"
+    local top_commands="status list activate add rename remove desktop code"
     local desktop_cmds="status list activate add rename remove"
     local code_cmds="status list activate add rename remove"
 

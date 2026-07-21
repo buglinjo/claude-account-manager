@@ -13,8 +13,7 @@
 #   - Never delete user data.
 
 # Create a symlink `link` -> `target`. Target must exist and be a directory.
-# Refuses to overwrite a real (non-symlink) directory; that is a legacy layout
-# and must be migrated first.
+# Refuses to overwrite a real (non-symlink) directory.
 make_symlink() {
   local target="$1" link="$2"
   if [[ ! -e "$target" ]]; then
@@ -27,7 +26,7 @@ make_symlink() {
   fi
   if [[ -e "$link" && ! -L "$link" ]]; then
     err "Path already exists and is a real directory (not a symlink): $link"
-    err "This looks like a legacy installation. Run 'cam migrate' first."
+    err "A real (non-symlink) directory already exists at $link. cam will not overwrite it."
     return 1
   fi
   ln -sfn -- "$target" "$link" || { err "Failed to create symlink: $link"; return 1; }

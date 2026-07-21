@@ -25,7 +25,6 @@ run_out() {
   local stdin_arg=""
   if [[ -t 0 ]]; then stdin_arg="</dev/null"; fi
   OUT="$(CLAUDE_ACCOUNT_MANAGER_HOME="$CONF" \
-         CLAUDE_PROFILE_OLD_CONFIG="$OLD_CONFIG" \
          CLAUDE_PROFILE_APP_SUPPORT="$BASE" \
          CLAUDE_PROFILE_CLUDE_HOME="$CLHOME" \
          CLAUDE_PROFILE_DISABLE_OPEN=1 \
@@ -111,8 +110,8 @@ assert_file_json() {
   else FAIL=$((FAIL+1)); echo "FAIL: $desc (missing in $file: $needle)"; fi
 }
 
-setup() { BASE="$(mktemp -d)"; CONF="$(mktemp -d)"; CLHOME="$(mktemp -d)/claudehome"; OLD_CONFIG="$(mktemp -d)/oldconfig"; }
-teardown() { rm -rf -- "$BASE" "$CONF" "$(dirname "$CLHOME")" "$(dirname "$OLD_CONFIG")" /tmp/cp_err 2>/dev/null || true; }
+setup() { BASE="$(mktemp -d)"; CONF="$(mktemp -d)"; CLHOME="$(mktemp -d)/claudehome"; }
+teardown() { rm -rf -- "$BASE" "$CONF" "$(dirname "$CLHOME")" /tmp/cp_err 2>/dev/null || true; }
 
 # ---------------------------------------------------------------------------
 echo "=== Test 1: add creates a sparse profile (no component dirs) ==="
@@ -191,30 +190,7 @@ MOCK=0
 mkdir -p "$BASE/Claude"
 printf 'x' > "$BASE/Claude/marker"
 run_out status
-assert_contains "status notes legacy install" "legacy installation" "$OUT"
-assert_contains "status notes migrate" "cam migrate" "$OUT"
-teardown
-
-echo "=== Test 8: migration converts legacy Desktop layout ==="
-setup
-MOCK=0
-# Active account (unnamed) + one legacy inactive account.
-mkdir -p "$BASE/Claude"
-printf 'active-data' > "$BASE/Claude/active_marker"
-mkdir -p "$BASE/Claude-work"
-printf 'work-data' > "$BASE/Claude-work/work_marker"
-MOCK=0 run_out migrate personal --force
-assert_eq "migrate exit 0" "0" "$CODE"
-assert_dir_exists "personal desktop migrated" "$CONF/accounts/personal/desktop"
-assert_eq "active data preserved" "active-data" "$(cat "$CONF/accounts/personal/desktop/active_marker" 2>/dev/null)"
-assert_dir_exists "work desktop migrated" "$CONF/accounts/work/desktop"
-assert_eq "work data preserved" "work-data" "$(cat "$CONF/accounts/work/desktop/work_marker" 2>/dev/null)"
-assert_symlink "Claude now symlink" "$BASE/Claude"
-assert_symlink_target "Claude -> personal desktop" "$BASE/Claude" "$CONF/accounts/personal/desktop"
-assert_file_json "config has personal" "$CONF/config.json" '"personal"'
-assert_file_json "config has work" "$CONF/config.json" '"work"'
-# Migration must never create a root-level code/ directory.
-assert_dir_missing "no root-level code dir" "$CONF/code"
+assert_contains "status notes real dir" "real (non-symlink) directory" "$OUT"
 teardown
 
 echo "=== Test 9: rename updates symlinks + config ==="
@@ -376,29 +352,7 @@ assert_eq "desktop remove exit 0" "0" "$CODE"
 assert_dir_missing "whole profile gone" "$CONF/accounts/work"
 teardown
 
-echo "=== Test 17: migrate a real ~/.claude into a Code profile ==="
-setup
-MOCK=0
-mkdir -p "$CLHOME"
-printf 'code-data' > "$CLHOME/code_marker"
-MOCK=0 run_out migrate personal --force
-assert_eq "migrate real ~/.claude exit 0" "0" "$CODE"
-assert_dir_exists "code profile migrated" "$CONF/accounts/personal/code"
-assert_eq "code data preserved" "code-data" "$(cat "$CONF/accounts/personal/code/code_marker" 2>/dev/null)"
-assert_symlink "~/.claude now symlink" "$CLHOME"
-assert_symlink_target "~/.claude -> personal code" "$CLHOME" "$CONF/accounts/personal/code"
-assert_file_json "config has personal" "$CONF/config.json" '"personal"'
-# code status now reports the active profile and no legacy note
-MOCK=0 run_out code status
-assert_contains "code active after migrate" "personal" "$OUT"
-if printf '%s' "$OUT" | grep -qF "legacy installation"; then
-  FAIL=$((FAIL+1)); echo "FAIL: legacy note still present after migrate"
-else
-  PASS=$((PASS+1)); echo "PASS: no legacy note after migrate"
-fi
-teardown
-
-echo "=== Test 18: CASE 1 - both products available, activate both ==="
+echo "=== Test 17: CASE 1 - both products available, activate both ==="
 setup
 MOCK=0 CAM_DESKTOP=1 CAM_CODE=1 run_out desktop add work >/dev/null
 MOCK=0 CAM_DESKTOP=1 CAM_CODE=1 run_out code add work >/dev/null
@@ -456,37 +410,7 @@ assert_eq "explicit desktop activate exit 0" "0" "$CODE"
 assert_symlink "desktop symlink created" "$BASE/Claude"
 teardown
 
-echo "=== Test 23: old-location migration detection notice ==="
-setup
-MOCK=0
-rm -rf "$CONF"                      # new home must not exist yet
-mkdir -p "$OLD_CONFIG/profiles/work"
-run_out status
-assert_contains "notice: found old cam data" "Found old cam data" "$ERR"
-assert_contains "notice: would like to migrate" "Would you like to migrate to" "$ERR"
-assert_contains "notice: run cam migrate" "Run 'cam migrate'" "$ERR"
-teardown
 
-echo "=== Test 24: cam migrate moves the old location into the new home ==="
-setup
-MOCK=0 CAM_DESKTOP=1 CAM_CODE=1
-rm -rf "$CONF"                      # new home must not exist yet
-mkdir -p "$OLD_CONFIG/profiles/work/desktop" "$OLD_CONFIG/profiles/work/code"
-printf '{"profiles":{"work":{}}}' > "$OLD_CONFIG/config.json"
-run_out migrate --force
-assert_eq "migrate old-location exit 0" "0" "$CODE"
-assert_file_json "new config has profile" "$CONF/config.json" '"work"'
-assert_dir_exists "profile migrated" "$CONF/accounts/work"
-assert_dir_exists "desktop subdir migrated" "$CONF/accounts/work/desktop"
-assert_dir_exists "code subdir migrated" "$CONF/accounts/work/code"
-# Old location is gone; notice no longer appears.
-run_out status
-if printf '%s' "$ERR" | grep -qF "Found old cam data"; then
-  FAIL=$((FAIL+1)); echo "FAIL: old-location notice still appears after migrate"
-else
-  PASS=$((PASS+1)); echo "PASS: no old-location notice after migrate"
-fi
-teardown
 
 echo "=== Test 15: cannot overwrite an existing profile on rename ==="
 setup

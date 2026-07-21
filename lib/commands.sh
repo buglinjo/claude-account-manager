@@ -3,8 +3,7 @@
 # cam - CLI command implementations and routing.
 #
 # This module owns the shared command implementations (do_*), the combined
-# status/list views, the per-product subcommand dispatchers, help, the
-# old-location notice, and main().
+# status/list views, the per-product subcommand dispatchers, help, and main().
 
 # ---------------------------------------------------------------------------
 # Shared command implementations
@@ -391,13 +390,6 @@ CODE COMMANDS (cam code ...):
   rename <old> <new>  Rename a account (strict: Code account must exist).
   remove <name>       Remove a account (strict; confirmation).
 
-OTHER:
-  migrate [<name>]    Migrate legacy data into accounts: move the previous
-                      ~/.config/claude-account-manager location into
-                      ~/.claude-account-manager, and convert pre-symlink
-                      Claude Desktop / ~/.claude layouts. Requires confirmation
-                      (or --force). Never overwrites existing data.
-
 NOTES:
   cam works even when Claude Desktop or Claude Code is absent. If a product is
   not installed, activation of that product is skipped with a warning. The
@@ -406,7 +398,7 @@ NOTES:
 
 FLAGS:
   --headless          Never prompt; report errors via exit codes.
-  --force             Bypass confirmation prompts (e.g. remove, migrate).
+  --force             Bypass confirmation prompts (e.g. remove).
   --launch            Reopen Claude Desktop after switching (default).
   --no-launch         Do not reopen Claude Desktop after switching.
   --verbose           Show detailed operations.
@@ -424,21 +416,6 @@ EXIT CODES:
 EOF
 }
 
-# ---------------------------------------------------------------------------
-# Old-location notice + argument parsing / dispatch
-# ---------------------------------------------------------------------------
-
-# Non-blocking notice: if the previous storage location still exists but the
-# new canonical home does not, suggest `cam migrate`. Never moves data here.
-maybe_notify_old_location() {
-  [[ -e "$OLD_CONFIG_HOME" && ! -e "$CAM_HOME" ]] || return 0
-  err "Found old cam data:"
-  err "  $OLD_CONFIG_HOME"
-  err "Would you like to migrate to:"
-  err "  $CAM_HOME"
-  err "Run 'cam migrate' to move it (data is never overwritten automatically)."
-}
-
 main() {
   local args=()
   local a
@@ -454,16 +431,12 @@ main() {
     esac
   done
 
-  maybe_notify_old_location
-
   local cmd="${args[0]:-}"
   case "$cmd" in
     desktop)
       desktop_main "${args[@]:1}" ;;
     code)
       code_main "${args[@]:1}" ;;
-    migrate)
-      cmd_migrate "${args[1]:-}" ;;
     status|list|activate|add|rename|remove)
       combined_main "$cmd" "${args[@]:1}" ;;
     "")      err "No command specified."; print_help; exit 1 ;;

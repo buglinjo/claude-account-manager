@@ -27,7 +27,6 @@ source "$CAM_ROOT/lib/symlinks.sh"
 source "$CAM_ROOT/lib/detection.sh"
 source "$CAM_ROOT/lib/desktop.sh"
 source "$CAM_ROOT/lib/code.sh"
-source "$CAM_ROOT/lib/migration.sh"
 source "$CAM_ROOT/lib/commands.sh"
 
 main "$@"

@@ -140,7 +140,7 @@ code_status() {
     echo "  Active account: (none)"
     if [[ -e "$ACTIVE_CODE" && ! -L "$ACTIVE_CODE" ]]; then
       echo "  Note: a real (non-symlink) $ACTIVE_CODE was found."
-      echo "        This is a legacy installation. Run 'cam migrate'."
+      echo "        A real (non-symlink) directory exists at this path. cam will not overwrite it."
     fi
   fi
 }

@@ -10,10 +10,6 @@
 # Overridable for tests via CLAUDE_ACCOUNT_MANAGER_HOME.
 CAM_HOME="${CLAUDE_ACCOUNT_MANAGER_HOME:-$HOME/.claude-account-manager}"
 
-# Previous (pre-migration) location; used only for one-time migration detection.
-# Overridable via CLAUDE_PROFILE_OLD_CONFIG.
-OLD_CONFIG_HOME="${CLAUDE_PROFILE_OLD_CONFIG:-$HOME/.config/claude-account-manager}"
-
 # Where the active Claude Desktop symlink lives (BASE_DIR/Claude).
 # Overridable via CLAUDE_PROFILE_APP_SUPPORT.
 BASE_DIR="${CLAUDE_PROFILE_APP_SUPPORT:-$HOME/Library/Application Support}"
