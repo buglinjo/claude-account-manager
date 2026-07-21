@@ -59,16 +59,20 @@ if git rev-parse "$NEW_TAG" >/dev/null 2>&1; then
   die "tag $NEW_TAG already exists locally"
 fi
 
-# ---- compute archive SHA ---------------------------------------------------
-ARCHIVE_PREFIX="claude-account-manager-${NEW_TAG#v}/"
-
-info "computing archive sha256..."
-SHA=$(git archive --format=tar.gz --prefix="$ARCHIVE_PREFIX" HEAD | shasum -a 256 | cut -d' ' -f1)
-info "sha256: $SHA"
+ARCHIVE_URL="https://github.com/${GITHUB_REPO}/archive/refs/tags/${NEW_TAG}.tar.gz"
 
 # ---- create tag ------------------------------------------------------------
 info "creating tag $NEW_TAG..."
 git tag -a "$NEW_TAG" -m "cam ${NEW_TAG}"
+
+# ---- push tag so GitHub generates the archive ------------------------------
+info "pushing tag $NEW_TAG to origin..."
+git push origin "$NEW_TAG"
+
+# ---- download archive and compute SHA (matches exactly what brew fetches) ---
+info "downloading archive to compute sha256..."
+SHA=$(curl -sL "$ARCHIVE_URL" | shasum -a 256 | cut -d' ' -f1)
+info "sha256: $SHA"
 
 # ---- update Homebrew formula -----------------------------------------------
 TAP_DIR="$(cd "$ROOT_DIR/$HOMEBREW_TAP_REL" && pwd 2>/dev/null)" || die "homebrew tap not found at $ROOT_DIR/$HOMEBREW_TAP_REL"
@@ -80,20 +84,11 @@ fi
 
 info "updating $FORMULA_FILE..."
 
-# Update url to tag-based archive
-sed -i '' "s|url \".*\"|url \"https://github.com/${GITHUB_REPO}/archive/refs/tags/${NEW_TAG}.tar.gz\"|" "$FORMULA_FILE"
-
-# Update sha256
+sed -i '' "s|url \".*\"|url \"$ARCHIVE_URL\"|" "$FORMULA_FILE"
 sed -i '' "s|sha256 \".*\"|sha256 \"$SHA\"|" "$FORMULA_FILE"
-
-# Remove any stale revision line
 sed -i '' '/^  revision/d' "$FORMULA_FILE"
 
 info "formula updated"
-
-# ---- push tag --------------------------------------------------------------
-info "pushing tag $NEW_TAG to origin..."
-git push origin "$NEW_TAG"
 
 # ---- create GitHub Release -------------------------------------------------
 if command -v gh >/dev/null 2>&1; then
