@@ -28,7 +28,25 @@ tricks).
 
 ## Installation
 
-The script is a single self-contained Bash file. Install it into your `PATH`:
+Requires macOS and `python3` (for the metadata config store). Both ship with macOS.
+
+### Homebrew
+
+```bash
+brew tap buglinjo/claude-account-manager
+brew install claude-account-manager
+
+# verify
+cam --help
+```
+
+To upgrade later:
+
+```bash
+brew update && brew upgrade claude-account-manager
+```
+
+### Manual
 
 ```bash
 # copy into a directory on your PATH (requires write access)
@@ -39,10 +57,7 @@ sudo chmod +x /usr/local/bin/cam
 cam --help
 ```
 
-Or just run it directly with `bash cam ...`.
-
-> Requires macOS (uses `osascript` to detect Claude Desktop) and `python3` (for
-> the metadata config store). Both ship with macOS.
+Or run directly with `bash cam ...`.
 
 ## Shell completions
 
